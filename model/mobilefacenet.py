@@ -37,6 +37,12 @@ class Bottleneck(keras.layers.Layer):
         else:
             return self.conv(inputs)
 
+    def get_config(self):
+        config = {"connect": self.connect,
+                  }
+        base_config = super(Bottleneck, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 # conv block
 class ConvBlock(keras.layers.Layer):
@@ -78,6 +84,13 @@ class ConvBlock(keras.layers.Layer):
             return self.prelu(x)
         else:
             return x
+
+    def get_config(self):
+        config = {"linear": self.linear,
+                  "padding": self.padding,
+                  }
+        base_config = super(ConvBlock, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 # arc face loss calculation
@@ -126,6 +139,14 @@ class ArcFace(keras.layers.Layer):
     def compute_output_shape(self, input_shape):
         return (None, self.n_classes)
 
+    def get_config(self):
+        config = {"n_classes": self.n_classes,
+                  "s": self.s,
+                  "m":self.m
+                  }
+        base_config = super(ArcFace, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
 
 Mobilefacenet_bottleneck_setting = [
     # t, c , n ,s
@@ -137,7 +158,26 @@ Mobilefacenet_bottleneck_setting = [
 ]
 
 
-class MobileFacenet(keras.models.Model):
+def mobilefacenet(x_in, inplanes=64, setting=Mobilefacenet_bottleneck_setting):
+    x = ConvBlock(d_in=3, d_out=64, kernel_size=3, stride=2, padding=1)(x_in)
+    x = ConvBlock(d_in=64, d_out=64, kernel_size=3, stride=1, padding=1, depthwise=True)(x)
+    for t, c, n, s in setting:
+        for i in range(n):
+            if i == 0:
+                x = Bottleneck(inplanes, c, s, t)(x)
+            else:
+                x = Bottleneck(inplanes, c, 1, t)(x)
+    x = ConvBlock(d_in=128, d_out=512, kernel_size=1, stride=1, padding=0)(x)
+    x = ConvBlock(d_in=512, d_out=512, kernel_size=(7, 6), stride=1, padding=0,
+                                      depthwise=True, linear=True)(x)
+    x = ConvBlock(d_in=512, d_out=128, kernel_size=1, stride=1, padding=0,
+                                      linear=True)(x)
+    x = keras.layers.Flatten()(x)
+
+    return x
+
+
+class MobileFacenet(keras.layers.Layer):
 
     def __init__(self, setting=Mobilefacenet_bottleneck_setting):
 
@@ -164,9 +204,10 @@ class MobileFacenet(keras.models.Model):
         # layer 5
         self.linear_conv2 = ConvBlock(d_in=512, d_out=128, kernel_size=1, stride=1, padding=0,
                                       linear=True)
+        # flat
+        self.flat = keras.layers.Flatten()
 
-        # layer output
-        self.out_layer = ArcFace()
+
     def call(self, inputs, training=None, mask=None):
         x = inputs
         x = self.conv1(x)
@@ -175,7 +216,7 @@ class MobileFacenet(keras.models.Model):
         x = self.conv2(x)
         x = self.linear_conv1(x)
         x = self.linear_conv2(x)
-
+        x = self.flat(x)
         return x
 
     def build_graph(self, input_shape):
@@ -188,12 +229,34 @@ class MobileFacenet(keras.models.Model):
 
         _ = self.call(inputs)
 
-
-
+    def get_config(self):
+        config = {
+                  }
+        base_config = super(MobileFacenet, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 
 if __name__ == '__main__':
-    model = MobileFacenet()
-    model.build_graph(input_shape=(1, 112, 96, 3))
+
+    cls_num = 10575
+
+    def mobilefacenet_train(resume=False):
+
+        x = inputs = tf.keras.layers.Input(shape=(112, 96, 3))
+        x = mobilefacenet(x)
+
+        if not resume:
+            x = tf.keras.layers.Dense(cls_num)(x)
+            outputs = tf.nn.softmax(x)
+            return tf.keras.models.Model(inputs, outputs)
+        else:
+            y = tf.keras.layers.Input(shape=(cls_num,))
+            outputs = ArcFace(n_classes=cls_num)((x, y))
+
+            return tf.keras.models.Model([inputs, y], outputs)
+
+
+    model = mobilefacenet_train(resume=True)
     print(model.summary())
+    keras.models.save_model(model, 'model.h5')
