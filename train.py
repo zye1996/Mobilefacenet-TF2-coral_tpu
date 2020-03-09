@@ -2,13 +2,14 @@ import tensorflow as tf
 import numpy as np
 import os
 from model.mobilefacenet import *
+from model.mobilefacenet_func import *
 from sklearn.model_selection import train_test_split
 
 # CONFIG
 RESUME = True
 
 # load dataset
-data_root = "/Users/zhenyiye/Downloads/Mac(1)/CASIA_SUB"
+data_root = "C:/Users/chubb/PycharmProjects/mbfacenet_tf2/CASIA"
 img_txt_dir = os.path.join(data_root, 'CASIA-WebFace-112X96.txt')
 
 
@@ -53,9 +54,9 @@ cls_num = len(np.unique(train_label))
 
 batchsz = 64
 db_train = tf.data.Dataset.from_tensor_slices((train_image, train_label))     # construct train dataset
-db_train = db_train.shuffle(3).map(preprocess).batch(batchsz)
+db_train = db_train.shuffle(1000).map(preprocess).batch(batchsz)
 db_val = tf.data.Dataset.from_tensor_slices((val_image, val_lable))
-db_val = db_val.shuffle(3).map(preprocess).batch(batchsz)
+db_val = db_val.shuffle(1000).map(preprocess).batch(batchsz)
 
 
 # construct model
@@ -89,16 +90,25 @@ if __name__ == '__main__':
         def on_batch_end(self, batch, logs={}):
             self.losses.append(logs.get('loss'))
 
+    class SaveModel(keras.callbacks.Callback):
+
+        def on_batch_end(self, batch, logs=None):
+            model.save_weights("pretrained_model/", save_format="tf")
 
     history = LossHistory()
-    callback_list = [tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', min_delta=0.001, patience=10),
-                     tf.keras.callbacks.ModelCheckpoint("pretrained_model/model_ckpt.h5", monitor='val_accuracy', save_best_only=True),
+    callback_list = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=10),
+                     tf.keras.callbacks.ModelCheckpoint("pretrained_model/model_0_ckpt.h5", monitor='val_accuracy', save_best_only=True), #, save_weights_only=True),
                      tf.keras.callbacks.ReduceLROnPlateau(monitor = 'val_loss', factor = 0.2, patience = 200, min_lr = 0),
-                     LossHistory()]
+                     LossHistory(),]
 
     # compile model
     optimizer = tf.keras.optimizers.Adam(lr = 0.001, epsilon = 1e-8)
     model.compile(optimizer=optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
     model.fit(db_train, validation_data=db_val, validation_freq=1, epochs=100, callbacks=callback_list)
+
+    # inference model save
+    inference_model = keras.models.Model(inputs=model.input[0], outputs=model.layers[-3].output)
+    inference_model.save('pretrained_model/inference_model.h5')
+
 
 

@@ -158,25 +158,6 @@ Mobilefacenet_bottleneck_setting = [
 ]
 
 
-def mobilefacenet(x_in, inplanes=64, setting=Mobilefacenet_bottleneck_setting):
-    x = ConvBlock(d_in=3, d_out=64, kernel_size=3, stride=2, padding=1)(x_in)
-    x = ConvBlock(d_in=64, d_out=64, kernel_size=3, stride=1, padding=1, depthwise=True)(x)
-    for t, c, n, s in setting:
-        for i in range(n):
-            if i == 0:
-                x = Bottleneck(inplanes, c, s, t)(x)
-            else:
-                x = Bottleneck(inplanes, c, 1, t)(x)
-    x = ConvBlock(d_in=128, d_out=512, kernel_size=1, stride=1, padding=0)(x)
-    x = ConvBlock(d_in=512, d_out=512, kernel_size=(7, 6), stride=1, padding=0,
-                                      depthwise=True, linear=True)(x)
-    x = ConvBlock(d_in=512, d_out=128, kernel_size=1, stride=1, padding=0,
-                                      linear=True)(x)
-    x = keras.layers.Flatten()(x)
-
-    return x
-
-
 class MobileFacenet(keras.layers.Layer):
 
     def __init__(self, setting=Mobilefacenet_bottleneck_setting):

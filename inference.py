@@ -2,13 +2,19 @@ import tensorflow as tf
 import numpy as np
 import os
 from model.mobilefacenet import *
+from model.mobilefacenet_func import *
 from sklearn.model_selection import train_test_split
+
+# Set CPU as available physical device
+my_devices = tf.config.experimental.list_physical_devices(device_type='CPU')
+tf.config.experimental.set_visible_devices(devices= my_devices, device_type='CPU')
+
+# To find out which devices your operations and tensors are assigned to
+tf.debugging.set_log_device_placement(True)
 
 cls_num = 10572
 
-# construct model
 def mobilefacenet_train(resume=False):
-
     x = inputs = tf.keras.layers.Input(shape=(112, 96, 3))
     x = mobilefacenet(x)
 
@@ -21,16 +27,11 @@ def mobilefacenet_train(resume=False):
         outputs = ArcFace(n_classes=cls_num)((x, y))
 
         return tf.keras.models.Model([inputs, y], outputs)
-    
-    
-if __name__ == '__main__':
-    
-    model = mobilefacenet_train()
-    model.compile(optimizer=tf.keras.optimizers.Adam(lr = 0.001, epsilon = 1e-8), 
-                  loss='categorical_crossentropy', metrics=['accuracy'])
 
-    init_tensor = [tf.random.normal(shape=(1, 112, 96, 3)), tf.zeros(shape=(1, cls_num, ))]
-    model(init_tensor)
-    model.load_weights('pretrained_model/model_ckpt.h5')
-    model.save('pretrained_model/whole_model.h5')
-    
+if __name__ == '__main__':
+
+    model = keras.models.load_model("pretrained_model/model_0_ckpt.h5", custom_objects={"ArcFace": ArcFace})
+    #model.load_weights("pretrained_model/")
+    for layer in model.layers:
+        print(layer)
+        print()
