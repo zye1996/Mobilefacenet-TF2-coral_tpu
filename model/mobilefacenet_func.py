@@ -96,7 +96,7 @@ if __name__ == '__main__':
             return tf.keras.models.Model(inputs, outputs)
         else:
             y = tf.keras.layers.Input(shape=(cls_num,))
-            outputs = ArcFace(n_classes=cls_num)((x, y))
+            outputs = ArcFace_v2(n_classes=cls_num)((x, y))
             return tf.keras.models.Model([inputs, y], outputs)
 
     model = mobilefacenet_train(resume=True)
