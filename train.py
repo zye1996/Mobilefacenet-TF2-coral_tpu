@@ -27,6 +27,7 @@ def load_dataset(val_split=0.05):
     trainX, testX, trainy, testy = train_test_split(image_list, label_list, test_size=val_split)
 
     return trainX, testX, trainy, testy
+    #return image_list, label_list
 
 
 def preprocess(x,y):
@@ -49,6 +50,7 @@ def preprocess(x,y):
 
 # get data slices
 train_image, val_image, train_label, val_lable = load_dataset()
+#train_image, train_label = load_dataset()
 
 # get class number
 cls_num = len(np.unique(train_label))
@@ -101,7 +103,7 @@ if __name__ == '__main__':
         def on_train_begin(self, logs={}):
             self.acc = []
 
-        def on_batch_end(self, batch, logs=None):
+        def on_epoch_end(self, batch, logs=None):
             infer_model = tf.keras.models.Model(inputs=model.input[0], outputs=model.layers[-3].output)
             get_features(infer_model, "lfw", 'result/best_result.mat')
             evaluation_10_fold()
@@ -109,7 +111,7 @@ if __name__ == '__main__':
 
     history = LossHistory()
     callback_list = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=10),
-                     tf.keras.callbacks.ModelCheckpoint("pretrained_model/model_0_ckpt.h5", monitor='val_accuracy', save_best_only=True), #, save_weights_only=True),
+                     tf.keras.callbacks.ModelCheckpoint("pretrained_model/model_0_ckpt.h5", monitor='val_loss', save_best_only=True), #, save_weights_only=True),
                      tf.keras.callbacks.ReduceLROnPlateau(monitor = 'val_loss', factor=0.2, patience=200, min_lr=0),
                      LossHistory(),
                      TestLWF()]
@@ -117,7 +119,7 @@ if __name__ == '__main__':
     # compile model
     optimizer = tf.keras.optimizers.Adam(lr = 0.001, epsilon = 1e-8)
     model.compile(optimizer=optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
-    model.fit(db_train, validation_data=db_val, steps_per_epoch=1, validation_freq=1, epochs=2, callbacks=callback_list)
+    model.fit(db_train, steps_per_epoch=1, validation_data=db_val, validation_freq=1, epochs=2, callbacks=callback_list)
 
     # inference model save
     inference_model = keras.models.Model(inputs=model.input[0], outputs=model.layers[-3].output)
