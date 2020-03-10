@@ -87,23 +87,25 @@ def parseList(root):
 # create dataset
 def create_dataset(imgl_list, imgr_list):
 
-    for i in range(len(imgl_list)):
-        imgl = plt.imread(imgl_list[i])
-        if len(imgl.shape) == 2:
-            imgl = np.stack([imgl] * 3, 2)
-        imgr = plt.imread(imgr_list[i])
-        if len(imgr.shape) == 2:
-            imgr = np.stack([imgr] * 3, 2)
+    def gen():
+        for i in range(len(imgl_list)):
+            imgl = plt.imread(imgl_list[i])
+            if len(imgl.shape) == 2:
+                imgl = np.stack([imgl] * 3, 2)
+            imgr = plt.imread(imgr_list[i])
+            if len(imgr.shape) == 2:
+                imgr = np.stack([imgr] * 3, 2)
 
-        # flip image/augmentation
-        imglist = [imgl[np.newaxis, :, :, :],
-                   imgl[np.newaxis, :, ::-1, :],
-                   imgr[np.newaxis, :, :, :],
-                   imgr[np.newaxis, :, ::-1, :]]
-        for j in range(len(imglist)):
-            imglist[j] = (imglist[j].astype("float32") - 127.5) / 128.0
-        yield imglist
+            # flip image/augmentation
+            imglist = [imgl[:, :, :],
+                       imgl[:, ::-1, :],
+                       imgr[:, :, :],
+                       imgr[:, ::-1, :]]
+            for j in range(len(imglist)):
+                imglist[j] = (imglist[j].astype("float32") - 127.5) / 128.0
+            yield tuple(imglist)
 
+    return gen
 
 # get features
 def get_features(model, lfw_dir, feature_save_dir, resume=None):
@@ -121,8 +123,9 @@ def get_features(model, lfw_dir, feature_save_dir, resume=None):
 
     nl, nr, folds, flags = parseList(lfw_dir)
     gen = create_dataset(nl, nr)
+    dataset = tf.data.Dataset.from_generator(gen, (tf.float32, tf.float32, tf.float32, tf.float32)).batch(32)
 
-    for i, l in enumerate(gen):
+    for i, l in enumerate(dataset):
 
         # feed forward
         res = [model.predict(d) for d in l]
@@ -137,22 +140,19 @@ def get_features(model, lfw_dir, feature_save_dir, resume=None):
             featureRs = featureR
         else:
             featureRs = np.concatenate((featureRs, featureR), 0)
-        print(featureLs.shape)
+
         print(featureRs.shape)
-        #if i == 10:
-
-            #break
-
     # save result
     result = {'fl': featureLs, 'fr': featureRs, 'fold': folds, 'flag': flags}
     scipy.io.savemat(feature_save_dir, result)
 
 
 if __name__ == "__main__":
-    lfw_dir = "lfw"
+    lfw_dir = "C:/Users/chubb/PycharmProjects/mbfacenet_tf2/lfw"
     #nl, nr, folds, flags = parseList(lfw_dir)
     #gen = create_dataset(nl, nr)
     #for l in gen:
     #    print(len(l))
-    get_features(None, lfw_dir, 'result/best_result.mat')
+    model = tf.keras.models.load_model("pretrained_model/inference_model.h5", custom_objects={'ArcFace': ArcFace})
+    get_features(model, lfw_dir, 'result/best_result.mat')
     #evaluation_10_fold()

@@ -34,4 +34,3 @@ if __name__ == '__main__':
     #model.load_weights("pretrained_model/")
     for layer in model.layers:
         print(layer)
-        print()
