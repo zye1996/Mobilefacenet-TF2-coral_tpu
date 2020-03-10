@@ -53,7 +53,7 @@ train_image, val_image, train_label, val_lable = load_dataset()
 # get class number
 cls_num = len(np.unique(train_label))
 
-batchsz = 64
+batchsz = 128
 db_train = tf.data.Dataset.from_tensor_slices((train_image, train_label))     # construct train dataset
 db_train = db_train.shuffle(1000).map(preprocess).batch(batchsz)
 db_val = tf.data.Dataset.from_tensor_slices((val_image, val_lable))
@@ -110,13 +110,14 @@ if __name__ == '__main__':
     history = LossHistory()
     callback_list = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=10),
                      tf.keras.callbacks.ModelCheckpoint("pretrained_model/best_model_.{epoch:02d}-{val_loss:.2f}.h5",
-                                                        monitor='val_accuracy', save_best_only=True), #, save_weights_only=True),
+                                                        monitor='val_loss', save_best_only=True), #, save_weights_only=True),
                      tf.keras.callbacks.ReduceLROnPlateau(monitor = 'val_loss', factor=0.2, patience=200, min_lr=0),
                      LossHistory(),
                      TestLWF()]
 
     # compile model
-    optimizer = tf.keras.optimizers.Adam(lr = 0.001, epsilon = 1e-8)
+    # optimizer = tf.keras.optimizers.Adam(lr = 0.001, epsilon = 1e-8)
+    optimizer = tf.keras.optimizers.SGD(lr=0.1, decay=4e-5, momentum=0.9, nesterov=True)
     model.compile(optimizer=optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
     model.fit(db_train, validation_data=db_val, validation_freq=1, epochs=100, callbacks=callback_list)
 
