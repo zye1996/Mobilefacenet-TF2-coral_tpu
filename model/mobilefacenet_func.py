@@ -6,27 +6,28 @@ from model.mobilefacenet import *
 
 def bottleneck(x_in, d_in, d_out, stride, depth_multiplier):
     # decide whether there would be a short cut
-    if d_in == d_out and stride == 1:
+    if stride == 1 and d_in == d_out:
         connect = True
     else:
         connect = False
+
     # point-wise layers
     x = keras.layers.Conv2D(d_in * depth_multiplier, kernel_size=1, strides=1, padding='VALID', use_bias=False)(x_in)
     x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.PReLU()(x)
+    x = keras.layers.PReLU(shared_axes=[1, 2])(x)
 
     # depth-wise layers
     x = keras.layers.ZeroPadding2D(padding=(1, 1))(x)  # manually padding
     x = keras.layers.DepthwiseConv2D(kernel_size=3, strides=stride, padding='VALID', use_bias=False)(x)
     x = keras.layers.BatchNormalization()(x)
-    x = keras.layers.PReLU()(x)
+    x = keras.layers.PReLU(shared_axes=[1, 2])(x)
 
     # point-wise layers linear
     x = keras.layers.Conv2D(d_out, kernel_size=1, strides=1, padding='VALID', use_bias=False)(x)
     x = keras.layers.BatchNormalization()(x)
 
     if connect:
-        return x + x_in
+        return keras.layers.Add()([x, x_in])
     else:
         return x
 
@@ -47,7 +48,7 @@ def conv_block(x_in, d_in, d_out, kernel_size, stride, padding, depthwise=False,
     x = keras.layers.BatchNormalization()(x)
 
     if not linear:
-        return keras.layers.PReLU()(x)
+        return keras.layers.PReLU(shared_axes=[1, 2])(x)
     else:
         return x
 
@@ -71,6 +72,7 @@ def mobilefacenet(x_in, inplanes=64, setting=Mobilefacenet_bottleneck_setting):
                 x = bottleneck(x, inplanes, c, s, t)
             else:
                 x = bottleneck(x, inplanes, c, 1, t)
+            inplanes = c
     x = conv_block(x, d_in=128, d_out=512, kernel_size=1, stride=1, padding=0)
     x = conv_block(x, d_in=512, d_out=512, kernel_size=(7, 6), stride=1, padding=0,
                                       depthwise=True, linear=True)
