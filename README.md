@@ -7,6 +7,8 @@ Tensorflow 2 version of mobilefacenet from [MobileFaceNets: Efficient CNNs for A
 
 ## Usage
 
+### Dataset
+Use the same dataset as used in [Mobilefacenet-Pytorch](https://github.com/Xiaoccer/MobileFaceNet_Pytorch) to train. CASIA is used for training and LFW is used for testing.
 
 # Credit to
 1. Playground by Qihang Zheng: https://github.com/zhen8838/playground
