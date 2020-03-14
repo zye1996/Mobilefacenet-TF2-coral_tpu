@@ -179,12 +179,14 @@ class ArcFace_v2(keras.layers.Layer):
         mm = sin_m * self.m
         threshold = math.cos(math.pi - self.m)
 
+        X, Y_mask = inputs
+
         # features
         X = inputs[0]
         # 1-D or one-hot label works as mask
-        Y_mask = inputs[1]
+        #Y_mask = inputs[1]
         # If Y_mask is not in one-hot form, transfer it to one-hot form.
-        if Y_mask.shape[-1] == 1:
+        if tf.shape(Y_mask)[-1] == 1:
             Y_mask = tf.cast(Y_mask, tf.int32)
             Y_mask = tf.reshape(tf.one_hot(Y_mask, self.n_classes), (-1, self.n_classes))
 
