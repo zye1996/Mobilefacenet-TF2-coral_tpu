@@ -1,16 +1,25 @@
 import tensorflow as tf
 import numpy as np
 import os
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
 from model.mobilefacenet import *
 from model.mobilefacenet_func import *
 from sklearn.model_selection import train_test_split
 from test_lfw import *
 
 # CONFIG
-RESUME = True
+LOAD_MODEL = 14
+RESUME = False
+MIXED_PRECISION = False
+
+if MIXED_PRECISION:
+    policy = mixed_precision.Policy('mixed_float16')
+    mixed_precision.set_policy(policy)
+    print('Compute dtype: %s' % policy.compute_dtype)
+    print('Variable dtype: %s' % policy.variable_dtype)
 
 # load dataset
-data_root = "/Users/zhenyiye/Downloads/Mac(1)/CASIA_SUB"
+data_root = "C:/Users/chubb/PycharmProjects/mbfacenet_tf2/CASIA"
 img_txt_dir = os.path.join(data_root, 'CASIA-WebFace-112X96.txt')
 
 
@@ -27,7 +36,6 @@ def load_dataset(val_split=0.05):
     trainX, testX, trainy, testy = train_test_split(image_list, label_list, test_size=val_split)
 
     return trainX, testX, trainy, testy
-    #return image_list, label_list
 
 
 def preprocess(x,y):
@@ -50,12 +58,11 @@ def preprocess(x,y):
 
 # get data slices
 train_image, val_image, train_label, val_lable = load_dataset()
-#train_image, train_label = load_dataset()
 
 # get class number
 cls_num = len(np.unique(train_label))
 
-batchsz = 64
+batchsz = 128
 db_train = tf.data.Dataset.from_tensor_slices((train_image, train_label))     # construct train dataset
 db_train = db_train.shuffle(1000).map(preprocess).batch(batchsz)
 db_val = tf.data.Dataset.from_tensor_slices((val_image, val_lable))
@@ -71,18 +78,21 @@ def mobilefacenet_train(resume=False):
 
     if not resume:
         x = tf.keras.layers.Dense(cls_num)(x)
-        outputs = tf.nn.softmax(x)
+        outputs = tf.keras.layers.Activation('softmax', dtype='float32', name='predictions')(x)
         return tf.keras.models.Model(inputs, outputs)
     else:
         y = tf.keras.layers.Input(shape=(cls_num,))
-        outputs = ArcFace(n_classes=cls_num)((x, y))
+        outputs = ArcFace_v2(n_classes=cls_num)((x, y))
 
         return tf.keras.models.Model([inputs, y], outputs)
 
 
 if __name__ == '__main__':
 
-    model = mobilefacenet_train(resume=True)
+    if LOAD_MODEL != 0:
+        model = keras.models.load_model("pretrained_model/best_model_.14-2.38.h5")
+    else:
+        model = mobilefacenet_train(resume=RESUME)
     print(model.summary())
 
     # callbacks
@@ -95,7 +105,7 @@ if __name__ == '__main__':
 
     class SaveModel(keras.callbacks.Callback):
 
-        def on_batch_end(self, batch, logs=None):
+        def on_epoch_end(self, batch, logs=None):
             model.save_weights("pretrained_model/", save_format="tf")
 
     # test on LWF
@@ -104,25 +114,55 @@ if __name__ == '__main__':
             self.acc = []
 
         def on_epoch_end(self, batch, logs=None):
-            infer_model = tf.keras.models.Model(inputs=model.input[0], outputs=model.layers[-3].output)
-            get_features(infer_model, "lfw", 'result/best_result.mat')
+            if RESUME:
+                infer_model = tf.keras.models.Model(inputs=model.input[0], outputs=model.layers[-3].output)
+            else:
+                infer_model = tf.keras.models.Model(inputs=model.input, outputs=model.layers[-3].output)
+            get_features(infer_model, "C:/Users/chubb/PycharmProjects/mbfacenet_tf2/lfw", 'result/best_result.mat')
             evaluation_10_fold()
 
+    # decay scheduler
+    def scheduler(epoch):
+        # [36, 52, 58]
+        if RESUME:
+            if epoch < 36:
+                return 0.1
+            elif epoch < 52:
+                return 0.01
+            elif epoch < 58:
+                return 0.001
+            else:
+                return 0.0001
+        else:
+            if epoch < 20:
+                return 0.1
+            elif epoch < 35:
+                return 0.01
+            elif epoch < 45:
+                return 0.001
+            else:
+                return 0.0001
 
     history = LossHistory()
     callback_list = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=10),
-                     tf.keras.callbacks.ModelCheckpoint("pretrained_model/model_0_ckpt.h5", monitor='val_loss', save_best_only=True), #, save_weights_only=True),
-                     tf.keras.callbacks.ReduceLROnPlateau(monitor = 'val_loss', factor=0.2, patience=200, min_lr=0),
+                     tf.keras.callbacks.ModelCheckpoint("pretrained_model/best_model_.{epoch:02d}-{val_loss:.2f}.h5",
+                                                        monitor='val_loss'), #, save_weights_only=True),
+                     tf.keras.callbacks.LearningRateScheduler(scheduler),
+                     #tf.keras.callbacks.ReduceLROnPlateau(monitor = 'val_loss', factor=0.2, patience=200, min_lr=0),
                      LossHistory(),
                      TestLWF()]
 
     # compile model
-    optimizer = tf.keras.optimizers.Adam(lr = 0.001, epsilon = 1e-8)
+    # optimizer = tf.keras.optimizers.Adam(lr = 0.001, epsilon = 1e-8)
+    optimizer = tf.keras.optimizers.SGD(lr=0.1, momentum=0.9, nesterov=True)
     model.compile(optimizer=optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
-    model.fit(db_train, steps_per_epoch=1, validation_data=db_val, validation_freq=1, epochs=2, callbacks=callback_list)
+    model.fit(db_train, validation_data=db_val, validation_freq=1, epochs=50, callbacks=callback_list, initial_epoch=LOAD_MODEL)
 
     # inference model save
-    inference_model = keras.models.Model(inputs=model.input[0], outputs=model.layers[-3].output)
+    if RESUME:
+        inference_model = keras.models.Model(inputs=model.input[0], outputs=model.layers[-3].output)
+    else:
+        inference_model = keras.models.Model(inputs=model.input, outputs=model.layers[-3].output)
     inference_model.save('pretrained_model/inference_model.h5')
 
 

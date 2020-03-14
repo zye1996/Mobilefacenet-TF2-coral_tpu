@@ -159,7 +159,7 @@ class ArcFace_v2(keras.layers.Layer):
         the final calculated outputs
     '''
 
-    def __init__(self, n_classes, s=64., m=0.5, **kwargs):
+    def __init__(self, n_classes, s=32., m=0.5, **kwargs):
         self.init = keras.initializers.get('glorot_uniform')  # Xavier uniform intializer
         self.n_classes = n_classes
         self.s = s
@@ -173,28 +173,27 @@ class ArcFace_v2(keras.layers.Layer):
                                  initializer=self.init)
         super(ArcFace_v2, self).build(input_shape[0])
 
-    def call(self, inputs, mask=None):
+    def call(self, inputs, **kwargs):
         cos_m = math.cos(self.m)
         sin_m = math.sin(self.m)
         mm = sin_m * self.m
         threshold = math.cos(math.pi - self.m)
 
-        X, Y_mask = inputs
-
         # features
-        X = inputs[0]
+        #X = inputs[0]
         # 1-D or one-hot label works as mask
         #Y_mask = inputs[1]
+        X, Y_mask = inputs
         # If Y_mask is not in one-hot form, transfer it to one-hot form.
-        if tf.shape(Y_mask)[-1] == 1:
-            Y_mask = tf.cast(Y_mask, tf.int32)
-            Y_mask = tf.reshape(tf.one_hot(Y_mask, self.n_classes), (-1, self.n_classes))
+        #if tf.shape(Y_mask)[-1] == 1:
+        #    Y_mask = tf.cast(Y_mask, tf.int32)
+        #    Y_mask = tf.reshape(tf.one_hot(Y_mask, self.n_classes), (-1, self.n_classes))
 
         X_normed = tf.math.l2_normalize(X, axis=1)  # L2 Normalized X
-        self.W = tf.math.l2_normalize(self.W, axis=0)  # L2 Normalized Weights
+        W = tf.math.l2_normalize(self.W, axis=0)  # L2 Normalized Weights
 
         # cos(theta + m)
-        cos_theta = tf.keras.backend.dot(X_normed, self.W)  # 矩阵乘法
+        cos_theta = tf.keras.backend.dot(X_normed, W)  # 矩阵乘法
         cos_theta2 = tf.square(cos_theta)
         sin_theta2 = 1. - cos_theta2
         sin_theta = tf.sqrt(sin_theta2 + tf.keras.backend.epsilon())
