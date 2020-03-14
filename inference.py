@@ -30,7 +30,7 @@ def mobilefacenet_train(resume=False):
 
 if __name__ == '__main__':
 
-    model = keras.models.load_model("pretrained_model/model_0_ckpt.h5", custom_objects={"ArcFace": ArcFace})
+    model = keras.models.load_model("pretrained_model/train_1/best_model_.50-8.39.h5", custom_objects={"ArcFace_v2": ArcFace_v2})
     #model.load_weights("pretrained_model/")
     for layer in model.layers:
         print(layer)

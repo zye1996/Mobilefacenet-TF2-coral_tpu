@@ -1,8 +1,11 @@
 import tensorflow as tf
 import tensorflow.keras as keras
-import math
+from tensorflow.keras.regularizers import l2
 from model.mobilefacenet import *
+import math
 
+# weight decay setting
+weight_decay = 4e-5
 
 def bottleneck(x_in, d_in, d_out, stride, depth_multiplier):
     # decide whether there would be a short cut
@@ -12,18 +15,21 @@ def bottleneck(x_in, d_in, d_out, stride, depth_multiplier):
         connect = False
 
     # point-wise layers
-    x = keras.layers.Conv2D(d_in * depth_multiplier, kernel_size=1, strides=1, padding='VALID', use_bias=False)(x_in)
+    x = keras.layers.Conv2D(d_in * depth_multiplier, kernel_size=1, strides=1, padding='VALID',
+                            use_bias=False, kernel_regularizer=l2(weight_decay))(x_in)
     x = keras.layers.BatchNormalization()(x)
     x = keras.layers.PReLU(shared_axes=[1, 2])(x)
 
     # depth-wise layers
     x = keras.layers.ZeroPadding2D(padding=(1, 1))(x)  # manually padding
-    x = keras.layers.DepthwiseConv2D(kernel_size=3, strides=stride, padding='VALID', use_bias=False)(x)
+    x = keras.layers.DepthwiseConv2D(kernel_size=3, strides=stride, padding='VALID',
+                                     use_bias=False, kernel_regularizer=l2(weight_decay))(x)
     x = keras.layers.BatchNormalization()(x)
     x = keras.layers.PReLU(shared_axes=[1, 2])(x)
 
     # point-wise layers linear
-    x = keras.layers.Conv2D(d_out, kernel_size=1, strides=1, padding='VALID', use_bias=False)(x)
+    x = keras.layers.Conv2D(d_out, kernel_size=1, strides=1, padding='VALID',
+                            use_bias=False, kernel_regularizer=l2(weight_decay))(x)
     x = keras.layers.BatchNormalization()(x)
 
     if connect:
@@ -41,9 +47,11 @@ def conv_block(x_in, d_in, d_out, kernel_size, stride, padding, depthwise=False,
         x = x_in
 
     if depthwise:
-        x = keras.layers.DepthwiseConv2D(kernel_size, strides=stride, padding='VALID', use_bias=False)(x)
+        x = keras.layers.DepthwiseConv2D(kernel_size, strides=stride, padding='VALID',
+                                         use_bias=False, kernel_regularizer=l2(weight_decay))(x)
     else:
-        x = keras.layers.Conv2D(d_out, kernel_size, strides=stride, padding='VALID', use_bias=False)(x)
+        x = keras.layers.Conv2D(d_out, kernel_size, strides=stride, padding='VALID',
+                                use_bias=False, kernel_regularizer=l2(weight_decay))(x)
 
     x = keras.layers.BatchNormalization()(x)
 
