@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import scipy.special
-from anchors import ANCHOR
+from inference.anchors import ANCHOR
 
 
 OBJ_THRES = 0.7

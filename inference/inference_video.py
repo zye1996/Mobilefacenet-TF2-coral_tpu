@@ -16,7 +16,6 @@ parser.add_argument('--coral_tpu', type=bool, default=False,
                     help="whether use tpu")
 args = parser.parse_args()
 
-
 def get_quant_int8_output():
     pass
 
