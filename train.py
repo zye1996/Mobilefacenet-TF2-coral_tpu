@@ -8,8 +8,9 @@ from sklearn.model_selection import train_test_split
 from test_lfw import *
 
 # CONFIG
-LOAD_MODEL = 14
-RESUME = False
+LOAD_MODEL = 0
+LOAD_MODEL_PATH = "pretrained_model/inference_model.h5"
+RESUME = True
 MIXED_PRECISION = False
 
 if MIXED_PRECISION:
@@ -70,18 +71,22 @@ db_val = db_val.shuffle(1000).map(preprocess).batch(batchsz)
 
 
 # construct model
+def mobilefacenet_train(softmax=False):
 
-def mobilefacenet_train(resume=False):
+    if RESUME:
+        model = keras.models.load_model(LOAD_MODEL_PATH)
+        inputs = model.input
+        x = model.output
+    else:
+        x = inputs = tf.keras.layers.Input(shape=(112, 96, 3))
+        x = mobilefacenet(x)
 
-    x = inputs = tf.keras.layers.Input(shape=(112, 96, 3))
-    x = mobilefacenet(x)
-
-    if not resume:
+    if softmax:
         x = tf.keras.layers.Dense(cls_num)(x)
         outputs = tf.keras.layers.Activation('softmax', dtype='float32', name='predictions')(x)
         return tf.keras.models.Model(inputs, outputs)
     else:
-        y = tf.keras.layers.Input(shape=(cls_num,))
+        y = tf.keras.layers.Input(shape=(cls_num,), name="target")
         outputs = ArcFace_v2(n_classes=cls_num)((x, y))
 
         return tf.keras.models.Model([inputs, y], outputs)
@@ -90,9 +95,9 @@ def mobilefacenet_train(resume=False):
 if __name__ == '__main__':
 
     if LOAD_MODEL != 0:
-        model = keras.models.load_model("pretrained_model/best_model_.14-2.38.h5")
+        model = keras.models.load_model(LOAD_MODEL_PATH)
     else:
-        model = mobilefacenet_train(resume=RESUME)
+        model = mobilefacenet_train(softmax=False)
     print(model.summary())
 
     # callbacks
@@ -144,7 +149,7 @@ if __name__ == '__main__':
                 return 0.0001
 
     history = LossHistory()
-    callback_list = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=10),
+    callback_list = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=15),
                      tf.keras.callbacks.ModelCheckpoint("pretrained_model/best_model_.{epoch:02d}-{val_loss:.2f}.h5",
                                                         monitor='val_loss'), #, save_weights_only=True),
                      tf.keras.callbacks.LearningRateScheduler(scheduler),
@@ -156,7 +161,7 @@ if __name__ == '__main__':
     # optimizer = tf.keras.optimizers.Adam(lr = 0.001, epsilon = 1e-8)
     optimizer = tf.keras.optimizers.SGD(lr=0.1, momentum=0.9, nesterov=True)
     model.compile(optimizer=optimizer, loss = 'categorical_crossentropy', metrics = ['accuracy'])
-    model.fit(db_train, validation_data=db_val, validation_freq=1, epochs=50, callbacks=callback_list, initial_epoch=LOAD_MODEL)
+    model.fit(db_train, validation_data=db_val, validation_freq=1, epochs=70, callbacks=callback_list, initial_epoch=34)
 
     # inference model save
     if RESUME:
