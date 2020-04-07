@@ -176,10 +176,10 @@ def face_algin_by_landmark(face_img: np.ndarray, face_landmark: np.ndarray,
 
 
 def face_recognition(feature, database):
-
     feature_norm = feature / np.linalg.norm(feature, 2, -1, keepdims=True)  # normalization
     result = np.dot(database, feature_norm.T)
     return np.argmax(result), np.max(result)
+
 
 
 if __name__ == '__main__':

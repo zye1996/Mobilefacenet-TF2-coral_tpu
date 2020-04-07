@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import time
 import argparse
+import platform
 
 from postprocessing import *
 
@@ -16,8 +17,21 @@ parser.add_argument('--coral_tpu', type=bool, default=False,
                     help="whether use tpu")
 args = parser.parse_args()
 
-def get_quant_int8_output():
-    pass
+EDGETPU_SHARED_LIB = {
+    'Linux': 'libedgetpu.so.1',
+    'Darwin': 'libedgetpu.1.dylib',
+    'Windows': 'edgetpu.dll'
+}[platform.system()]
+
+
+def get_quant_int8_output(interpreter, output_index):
+    feature = interpreter.get_tensor(output_index)
+    if feature.dtype == np.uint8:
+        zero_points = interpreter.get_output_details()[0]["quantization_parameters"]["zero_points"]
+        scales = interpreter.get_output_details()[0]["quantization_parameters"]["scales"]
+        return (feature - zero_points) * scales
+    return feature
+
 
 def preprocess(img):
     img = (img.astype('float32') - 127.5) / 128.0
@@ -27,8 +41,8 @@ def preprocess(img):
 
 if __name__ == '__main__':
 
-    MODEL_PATH = "pretrained_model/ulffd_landmark.tflite"
-    REC_MODEL_PATH = "pretrained_model/inference_model_quant.tflite"
+    MODEL_PATH = "pretrained_model/facedetection_320_240_edgetpu.tflite"
+    REC_MODEL_PATH = "pretrained_model/mobilefacenet_edgetpu.tflite"
     DATABASE_PATH = "pretrained_model/db.npy"
 
     if args.w == 320:
@@ -38,11 +52,15 @@ if __name__ == '__main__':
 
     # load model
     if args.coral_tpu:
-        interpreter = tflite.Interpreter(model_path='pretrained/retinaface_landmark_320_240_quant.tflite',
-                                         experimental_delegates=[tflite.load_delegate('libedgetpu.1.dylib')])
+        interpreter = tflite.Interpreter(model_path=MODEL_PATH,
+                                         experimental_delegates=[tflite.load_delegate(EDGETPU_SHARED_LIB)])
+        interpreter_rec = tflite.Interpreter(model_path=REC_MODEL_PATH,
+                                                         experimental_delegates=[tflite.load_delegate(EDGETPU_SHARED_LIB)])
     else:
         interpreter = tf.compat.v1.lite.Interpreter(model_path=MODEL_PATH)
         interpreter_rec = tf.compat.v1.lite.Interpreter(model_path=REC_MODEL_PATH)
+
+    # load database
     rec_db = np.load(DATABASE_PATH)
 
     # get handler
@@ -104,15 +122,18 @@ if __name__ == '__main__':
 
             # crop faces
             vaild_bboxs, face_imgs, face_landmarks = crop_faces(flipped, pred_bbox_pixel, pred_ldmk_pixel)
+
             # face recognition
             if len(face_imgs):
                 aligned = face_algin_by_landmark(face_imgs[0], face_landmarks[0])
-                aligned_norm = preprocess(aligned)
-
+                if not args.coral_tpu:
+                    aligned_norm = preprocess(aligned)
+                else:
+                    aligned_norm = np.expand_dims(aligned, axis=0)
                 interpreter_rec.set_tensor(rec_input_index, aligned_norm)
                 interpreter_rec.invoke()
                 # feature = rec_model.predict(aligned_norm)
-                feature = interpreter_rec.get_tensor(rec_output_index)
+                feature = get_quant_int8_output(interpreter_rec, rec_output_index)
                 result = face_recognition(feature, rec_db)
                 print(result)
                 cv2.imshow('cropped', aligned)

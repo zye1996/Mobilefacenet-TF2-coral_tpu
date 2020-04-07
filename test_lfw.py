@@ -148,11 +148,11 @@ def get_features(model, lfw_dir, feature_save_dir, resume=None):
 
 
 if __name__ == "__main__":
-    lfw_dir = "C:/Users/chubb/PycharmProjects/mbfacenet_tf2/lfw"
+    lfw_dir = "lfw"
     #nl, nr, folds, flags = parseList(lfw_dir)
     #gen = create_dataset(nl, nr)
     #for l in gen:
     #    print(len(l))
-    model = tf.keras.models.load_model("pretrained_model/train_2/inference_model.h5", custom_objects={'ArcFace': ArcFace})
+    model = tf.keras.models.load_model("pretrained_model/replaced_prelu_model.h5")
     get_features(model, lfw_dir, 'result/best_result.mat')
-    #evaluation_10_fold()
+    evaluation_10_fold()
