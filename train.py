@@ -9,7 +9,7 @@ from test_lfw import *
 
 # CONFIG
 LOAD_MODEL = 0
-LOAD_MODEL_PATH = "pretrained_model/inference_model.h5"
+LOAD_MODEL_PATH = "pretrained_model/training_model/inference_model.h5"
 RESUME = True
 MIXED_PRECISION = False
 

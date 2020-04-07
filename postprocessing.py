@@ -147,8 +147,9 @@ def crop_faces(draw_img, bboxs, landms):
     face_imgs = []
     face_landmarks = []
     vaild_bboxs = []
-
-    for box, landm in zip(bboxs.astype(int), landms):
+    valid_img_index = []
+    
+    for i, (box, landm) in enumerate(zip(bboxs.astype(int), landms)):
       # crop face region
       cx, cy = (box[:2] + box[2:]) // 2
       halfw = np.max(box[2:] - box[:2]) // 2
@@ -161,7 +162,9 @@ def crop_faces(draw_img, bboxs, landms):
         face_imgs.append(face_img)
         face_landmarks.append(face_landm)
         vaild_bboxs.append(box)
-    return vaild_bboxs, face_imgs, face_landmarks
+        valid_img_index.append(i)
+            
+    return valid_img_index, vaild_bboxs, face_imgs, face_landmarks
 
 
 def face_algin_by_landmark(face_img: np.ndarray, face_landmark: np.ndarray,

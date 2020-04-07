@@ -37,30 +37,36 @@ def preprocess(img):
 
 
 # load image
-img_yzy = preprocess(plt.imread("image/yzy.jpg"))
-img_lm = preprocess(plt.imread("image/lm.jpg"))
+img_yzy = preprocess(plt.imread("image/yzy/yzy.jpg"))
+img_lm = preprocess(plt.imread("image/lm/lm.jpg"))
+img_steve = preprocess(plt.imread("image/steve/0.jpg"))
 
-img_test = preprocess(plt.imread("image/lm_2.jpg"))
+img_test = preprocess(plt.imread("image/lm/lm_2.jpg"))
 
 
 if __name__ == '__main__':
 
     # feed forward
-    model = keras.models.load_model("pretrained_model/inference_model.h5")
+    model = keras.models.load_model("pretrained_model/training_model/inference_model_0.993.h5")
+
     embedding_yzy = model.predict(img_yzy)
     embedding_lm = model.predict(img_lm)
+    embedding_steve = model.predict(img_steve)
+
     embedding_test = model.predict(img_test)
 
     # test result
     embedding_yzy = embedding_yzy / np.expand_dims(np.sqrt(np.sum(np.power(embedding_yzy, 2), 1)), 1)
     embedding_lm = embedding_lm / np.expand_dims(np.sqrt(np.sum(np.power(embedding_lm, 2), 1)), 1)
+    embedding_steve = embedding_steve / np.expand_dims(np.sqrt(np.sum(np.power(embedding_steve, 2), 1)), 1)
     embedding_test = embedding_test / np.expand_dims(np.sqrt(np.sum(np.power(embedding_test, 2), 1)), 1)
 
     # get result
     print(np.sum(np.multiply(embedding_yzy, embedding_test), 1))
     print(np.sum(np.multiply(embedding_lm, embedding_test), 1))
+    print(np.sum(np.multiply(embedding_steve, embedding_test), 1))
 
     # save database
-    db = np.concatenate((embedding_yzy, embedding_lm), axis=0)
+    db = np.concatenate((embedding_yzy, embedding_lm, embedding_steve), axis=0)
     print(db.shape)
     np.save("pretrained_model/db", db)

@@ -6,7 +6,7 @@ import os
 
 root_dir = "../image"
 
-file_name = 'replaced_prelu_model.h5'
+file_name = 'training_model/inference_model_0.993.h5'
 
 def data_generator():
     for file in os.listdir(root_dir):
@@ -22,9 +22,9 @@ if __name__ == "__main__":
     converter.representative_dataset = data_generator
     converter.experimental_new_converter = False
     converter.experimental_new_quantizer = False
-    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-    converter.inference_input_type = tf.uint8
-    converter.inference_output_type = tf.uint8
+    # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    # converter.inference_input_type = tf.uint8
+    # converter.inference_output_type = tf.uint8
     tflite_quant_model = converter.convert()
 
     # write to file

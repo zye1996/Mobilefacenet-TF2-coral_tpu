@@ -5,6 +5,7 @@ import cv2
 import time
 import argparse
 import platform
+import json
 
 from postprocessing import *
 
@@ -41,9 +42,12 @@ def preprocess(img):
 
 if __name__ == '__main__':
 
-    MODEL_PATH = "pretrained_model/facedetection_320_240_edgetpu.tflite"
-    REC_MODEL_PATH = "pretrained_model/mobilefacenet_edgetpu.tflite"
+    MODEL_PATH_TPU = "pretrained_model/facedetection_320_240_edgetpu_cocompiled.tflite"
+    REC_MODEL_PATH_TPU = "pretrained_model/mobilefacenet_edgetpu_cocompiled.tflite"
+    MODEL_PATH = "pretrained_model/ulffd_landmark.tflite"
+    REC_MODEL_PATH = "pretrained_model/inference_model_0_quant.tflite"
     DATABASE_PATH = "pretrained_model/db.npy"
+    LABEL_PATH = "pretrained_model/label.json"
 
     if args.w == 320:
         W, H = 320, 240
@@ -52,9 +56,9 @@ if __name__ == '__main__':
 
     # load model
     if args.coral_tpu:
-        interpreter = tflite.Interpreter(model_path=MODEL_PATH,
+        interpreter = tflite.Interpreter(model_path=MODEL_PATH_TPU,
                                          experimental_delegates=[tflite.load_delegate(EDGETPU_SHARED_LIB)])
-        interpreter_rec = tflite.Interpreter(model_path=REC_MODEL_PATH,
+        interpreter_rec = tflite.Interpreter(model_path=REC_MODEL_PATH_TPU,
                                                          experimental_delegates=[tflite.load_delegate(EDGETPU_SHARED_LIB)])
     else:
         interpreter = tf.compat.v1.lite.Interpreter(model_path=MODEL_PATH)
@@ -62,6 +66,7 @@ if __name__ == '__main__':
 
     # load database
     rec_db = np.load(DATABASE_PATH)
+    label = json.load(open(LABEL_PATH))
 
     # get handler
     interpreter.allocate_tensors()
@@ -115,17 +120,25 @@ if __name__ == '__main__':
 
         # nms
         keep = nms_oneclass(pred_bbox_pixel, pred_prob)
+
+        # detection
         if len(keep > 0):
+
             pred_bbox_pixel = pred_bbox_pixel[keep, :]
             pred_ldmk_pixel = pred_ldmk_pixel[keep, :]
             pred_prob = pred_prob[keep]
 
             # crop faces
-            vaild_bboxs, face_imgs, face_landmarks = crop_faces(flipped, pred_bbox_pixel, pred_ldmk_pixel)
+            valid_index, vaild_bboxs, face_imgs, face_landmarks = crop_faces(flipped, pred_bbox_pixel, pred_ldmk_pixel)
+            pred_bbox_pixel = pred_bbox_pixel[valid_index, :]
+            pred_ldmk_pixel = pred_ldmk_pixel[valid_index, :]
+            pred_prob = pred_prob[valid_index]
 
-            # face recognition
-            if len(face_imgs):
-                aligned = face_algin_by_landmark(face_imgs[0], face_landmarks[0])
+            # loop over faces
+            for i in (range(pred_prob.shape[0])):
+
+                # face recognition
+                aligned = face_algin_by_landmark(face_imgs[i], face_landmarks[i])
                 if not args.coral_tpu:
                     aligned_norm = preprocess(aligned)
                 else:
@@ -136,10 +149,12 @@ if __name__ == '__main__':
                 feature = get_quant_int8_output(interpreter_rec, rec_output_index)
                 result = face_recognition(feature, rec_db)
                 print(result)
-                cv2.imshow('cropped', aligned)
+                # cv2.imshow('cropped'+str(i), aligned)
 
-            # draw result
-            for i in (range(pred_prob.shape[0])):
+                # put label
+                cv2.putText(flipped, label[str(result[0])], (int((pred_bbox_pixel[i, 0])), int(pred_bbox_pixel[i, 1]-10)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+                # put rectangle
                 cv2.rectangle(flipped, tuple(pred_bbox_pixel[i, :2].astype(int)),
                               tuple(pred_bbox_pixel[i, 2:].astype(int)), (255, 0, 0), 2)
                 for ldx, ldy, color in zip(pred_ldmk_pixel[i][0::2].astype(int),

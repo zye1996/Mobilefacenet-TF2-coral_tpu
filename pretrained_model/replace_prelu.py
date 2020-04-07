@@ -4,7 +4,7 @@ import re
 import numpy as np
 
 
-KERAS_MODEL_PATH = "inference_model_0.993.h5"
+KERAS_MODEL_PATH = "training_model/inference_model_0.993.h5"
 
 def insert_layer_nonseq(model, layer_regex, insert_layer_factory,
                         insert_layer_name=None, position='after'):
