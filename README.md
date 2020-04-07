@@ -14,7 +14,7 @@ Use the same dataset as used in [Mobilefacenet-Pytorch](https://github.com/Xiaoc
 Change the directory pointing to image dataset in train.py. I trained the model directly with ArcFace by setting RESUME to False but it is worthwhile to try out pretraining with softmax loss
 
 ### Result
-Trained model is evaluate on each epoch use LFW dataset and I got 99.1% accuracy without pretraining
+Trained model is evaluate on each epoch use LFW dataset and I got 99.3% accuracy without pretraining
 
 # Credit to
 1. Playground by Qihang Zheng: https://github.com/zhen8838/playground
