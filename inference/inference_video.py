@@ -6,8 +6,11 @@ import time
 import argparse
 import platform
 import json
+import threading
+import multiprocessing
 
 from postprocessing import *
+from FileVideoStreamer import *
 
 # FLAGS
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -38,6 +41,28 @@ def preprocess(img):
     img = (img.astype('float32') - 127.5) / 128.0
     img = np.expand_dims(img, axis=0)
     return img
+
+
+def cam_loop(q_flipped, q_rgbf):
+
+    cap = cv2.VideoCapture(0)
+
+    while True:
+        _ , frame = cap.read()
+        if frame is not None:
+            if args.platform == 'picamera':
+                rotated = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)  # roate counterclockwise
+                h, w, _ = rotated.shape
+                cropped_h = w * H / W
+                cropped = rotated[int((h - cropped_h) / 2):int((h + cropped_h) / 2), :]
+            else:
+                cropped = frame[:, 640 - 480:640 + 480]  # crop to retain the center area
+            resized = cv2.resize(cropped, (W, H))  # resize the images
+            flipped = cv2.flip(resized, 1)  # flip the camera
+            rgb = cv2.cvtColor(flipped, cv2.COLOR_BGR2RGB).astype('float32')
+            rgb_f = (rgb / 255) - 0.5
+            q_flipped.put(flipped)
+            q_rgbf.put(rgb_f)
 
 
 if __name__ == '__main__':
@@ -78,18 +103,30 @@ if __name__ == '__main__':
     rec_input_index = interpreter_rec.get_input_details()[0]['index']
     rec_output_index = interpreter_rec.get_output_details()[0]['index']
 
+    # Quene
+    q_flipped = multiprocessing.Manager().Queue(1)
+    q_rgbf = multiprocessing.Manager().Queue(1)
 
     # video capture
-    cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture(0)
+    # cap = FileVideoStream(0).start()
+    cam_process = multiprocessing.Process(target=cam_loop,args=(q_flipped, q_rgbf, ))
+    cam_process.start()
+
+    time.sleep(1)
 
     while True:
 
         start = time.time()
 
         # read camera
-        ret, frame = cap.read()
+        # ret, frame = cap.read()
+        flipped = q_flipped.get()
+        rgb_f = q_rgbf.get()
 
+        
         # image processing
+        '''
         if args.platform == 'picamera':
             rotated = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)  # roate counterclockwise
             h, w, _ = rotated.shape
@@ -99,8 +136,11 @@ if __name__ == '__main__':
             cropped = frame[:, 640 - 480:640 + 480]  # crop to retain the center area
         resized = cv2.resize(cropped, (W, H))  # resize the images
         flipped = cv2.flip(resized, 1)  # flip the camera
-        rgb = cv2.cvtColor(flipped, cv2.COLOR_BGR2RGB).astype('float32')
-        rgb_f = (rgb / 255) - 0.5  # normalization
+        '''
+
+        #rgb = cv2.cvtColor(flipped, cv2.COLOR_BGR2RGB).astype('float32') #flipped[...,::-1].copy().astype('float32') #
+        #rgb_f = (rgb / 255) - 0.5  # normalization
+
 
         # feed forward
         interpreter.set_tensor(input_index, rgb_f[np.newaxis, :, :, :])
@@ -149,7 +189,6 @@ if __name__ == '__main__':
                 feature = get_quant_int8_output(interpreter_rec, rec_output_index)
                 result = face_recognition(feature, rec_db)
                 print(result)
-                # cv2.imshow('cropped'+str(i), aligned)
 
                 # put label
                 cv2.putText(flipped, label[str(result[0])], (int((pred_bbox_pixel[i, 0])), int(pred_bbox_pixel[i, 1]-10)),
@@ -173,5 +212,7 @@ if __name__ == '__main__':
             break
 
     # When everything done, release the capture
-    cap.release()
+    #cap.release()
+    cam_process.terminate()
+    cam_process.join()
     cv2.destroyAllWindows()
