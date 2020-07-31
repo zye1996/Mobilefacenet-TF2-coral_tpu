@@ -1,6 +1,6 @@
-# mbfacenet_tf2
+# mbfacenet_tf2 with Coral EdgeTPU Support 
 
-Mobilefacenet with Tensorflow-2
+Mobilefacenet with Tensorflow-2, EdgeTPU models also supplied for running model on Coral EdgeTPU
 
 ## Introduction
 Tensorflow 2 version of mobilefacenet from [MobileFaceNets: Efficient CNNs for Accurate Real-Time Face Verification on Mobile Devices](https://arxiv.org/abs/1804.07573)
