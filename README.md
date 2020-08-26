@@ -5,6 +5,9 @@ Mobilefacenet with Tensorflow-2, EdgeTPU models also supplied for running model 
 ## Introduction
 Tensorflow 2 version of mobilefacenet from [MobileFaceNets: Efficient CNNs for Accurate Real-Time Face Verification on Mobile Devices](https://arxiv.org/abs/1804.07573)
 
+## Demo
+[Video Link](https://www.youtube.com/watch?v=o6G-xXyHyAM)
+
 ## Usage
 
 ### Dataset
