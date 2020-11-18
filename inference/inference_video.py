@@ -141,11 +141,37 @@ if __name__ == '__main__':
                 aligned = face_algin_by_landmark(face_imgs[i], face_landmarks[i])
                 feature, mask = face_recognizer.face_recognize(aligned, mask=True)
                 result = face_recognition(feature, rec_db)
-                print(result, mask)
+                is_mask = np.argmax(mask) == 0
+                if is_mask:
+                    mask_label = "mask"
+                else:
+                    mask_label = "no mask"
+                ((label_width, label_height), _) = cv2.getTextSize(
+                    mask_label,
+                    fontFace=cv2.FONT_HERSHEY_PLAIN,
+                    fontScale=1,
+                    thickness=2
+                )
 
                 # put label
-                cv2.putText(flipped, label[str(result[0])], (int((pred_bbox_pixel[i, 0])), int(pred_bbox_pixel[i, 1]-10)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+                cv2.putText(flipped, label[str(result[0])],
+                            (int((pred_bbox_pixel[i, 0])), int(pred_bbox_pixel[i, 1] - 10))
+                            ,
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
+                cv2.rectangle(
+                    flipped,
+                    (int((pred_bbox_pixel[i, 2]))-label_width, int(pred_bbox_pixel[i, 1])),
+                    (int(int((pred_bbox_pixel[i, 2])) + label_width * 0.01), int(pred_bbox_pixel[i, 1] + label_height + label_height * 0.25)),
+                    color=(255, 0, 0),
+                    thickness=cv2.FILLED
+                )
+                cv2.putText(flipped, mask_label,
+                            (int((pred_bbox_pixel[i, 2]))-label_width, int(pred_bbox_pixel[i, 1] + label_height + label_height * 0.25)),
+                            fontFace=cv2.FONT_HERSHEY_PLAIN,
+                            fontScale=1,
+                            color=(255, 255, 255),
+                            thickness=2
+                            )
                 # put rectangle
                 cv2.rectangle(flipped, tuple(pred_bbox_pixel[i, :2].astype(int)),
                               tuple(pred_bbox_pixel[i, 2:].astype(int)), (255, 0, 0), 2)
