@@ -1,0 +1,15 @@
+Edge TPU Compiler version 15.0.340273435
+Input: model_with_mask_clf_quant.tflite
+Output: model_with_mask_clf_quant_edgetpu.tflite
+
+Operator                       Count      Status
+
+PAD                            17         Mapped to Edge TPU
+RESHAPE                        1          Mapped to Edge TPU
+PRELU                          33         Mapped to Edge TPU
+ADD                            12         Mapped to Edge TPU
+FULLY_CONNECTED                3          Mapped to Edge TPU
+CONV_2D                        33         Mapped to Edge TPU
+QUANTIZE                       3          Mapped to Edge TPU
+DEPTHWISE_CONV_2D              17         Mapped to Edge TPU
+SOFTMAX                        1          Mapped to Edge TPU

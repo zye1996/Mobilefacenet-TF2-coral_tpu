@@ -2,7 +2,7 @@ import numpy as np
 import argparse
 import os
 import matplotlib.pyplot as plt
-from FaceRecognizer import FaceRecognizer
+from inference.FaceRecognizer import FaceRecognizer
 
 
 # FLAGS

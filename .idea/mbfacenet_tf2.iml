@@ -2,11 +2,12 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/inference" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/CASIA" />
       <excludeFolder url="file://$MODULE_DIR$/image" />
       <excludeFolder url="file://$MODULE_DIR$/lfw" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.7 (mbfacenet_tf2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.7 (tf2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
