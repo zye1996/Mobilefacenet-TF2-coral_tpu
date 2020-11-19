@@ -10,6 +10,8 @@ Tensorflow 2 version of mobilefacenet from [MobileFaceNets: Efficient CNNs for A
 
 ![Alt Text](demo/demo.gif)
 
+Running 60 fps on Desktop with Coral TPU, and around 24 fps on raspberry pi
+
 ## Usage
 
 ### Dataset
