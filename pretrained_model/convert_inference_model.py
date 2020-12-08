@@ -1,4 +1,5 @@
 import tensorflow as tf
+
 from model.mobilefacenet import *
 
 model_path = "train_3_arcface/best_model_.58-6.94.h5"

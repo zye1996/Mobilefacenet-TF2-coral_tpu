@@ -1,10 +1,12 @@
-import tensorflow as tf
-import numpy as np
 import os
+
 import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+
 from model.mobilefacenet import *
 from model.mobilefacenet_func import *
-from sklearn.model_selection import train_test_split
 
 # Set CPU as available physical device
 my_devices = tf.config.experimental.list_physical_devices(device_type='CPU')

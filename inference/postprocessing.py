@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 import scipy.special
-from anchors import ANCHOR
 
+from anchors import ANCHOR
 
 OBJ_THRES = 0.7
 NMS_THRES = 0.4
@@ -178,11 +178,10 @@ def face_algin_by_landmark(face_img: np.ndarray, face_landmark: np.ndarray,
     return resized
 
 
-def face_recognition(feature, database):
+def face_recognition(feature, database, threshold=0.5):
     feature_norm = feature / np.linalg.norm(feature, 2, -1, keepdims=True)  # normalization
     result = np.dot(database, feature_norm.T)
     return np.argmax(result), np.max(result)
-
 
 
 if __name__ == '__main__':

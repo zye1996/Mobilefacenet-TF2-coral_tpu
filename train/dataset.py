@@ -1,7 +1,8 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.misc
-import os
-import matplotlib.pyplot as plt
 
 
 class CASIA_Face(object):

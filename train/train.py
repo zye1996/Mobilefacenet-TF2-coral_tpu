@@ -1,9 +1,11 @@
-import numpy as np
 import os
-from tensorflow.keras.mixed_precision import experimental as mixed_precision
-from model.mobilefacenet_func import *
-from sklearn.model_selection import train_test_split
 from test.test_lfw import *
+
+import numpy as np
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
+
+from model.mobilefacenet_func import *
 
 # CONFIG
 LOAD_MODEL = 0
@@ -167,6 +169,3 @@ if __name__ == '__main__':
     else:
         inference_model = keras.models.Model(inputs=model.input, outputs=model.layers[-3].output)
     inference_model.save('pretrained_model/inference_model.h5')
-
-
-

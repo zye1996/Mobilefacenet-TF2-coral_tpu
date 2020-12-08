@@ -1,8 +1,8 @@
+import re
+
+import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
-import re
-import numpy as np
-
 
 KERAS_MODEL_PATH = "../pretrained_model/training_model/inference_model_0.993.h5"
 

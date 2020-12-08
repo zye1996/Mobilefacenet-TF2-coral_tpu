@@ -1,8 +1,10 @@
+import math
+
 import tensorflow as tf
 import tensorflow.keras as keras
 from tensorflow.keras.regularizers import l2
+
 from model.mobilefacenet import *
-import math
 
 # weight decay setting
 weight_decay = 4e-5

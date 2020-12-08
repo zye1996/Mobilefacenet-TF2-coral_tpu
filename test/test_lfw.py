@@ -1,14 +1,16 @@
-import sys
-import os
-import cv2
-import scipy.io
+import argparse
 import copy
 import os
-import tensorflow as tf
+import sys
+
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import argparse
+import scipy.io
+import tensorflow as tf
+
 from model.mobilefacenet import *
+
 
 def getAccuracy(scores, flags, threshold):
     p = np.sum(scores[flags == 1] > threshold)

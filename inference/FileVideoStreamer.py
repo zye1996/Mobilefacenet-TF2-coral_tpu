@@ -1,9 +1,10 @@
 # import the necessary packages
-from threading import Thread, Lock
-from queue import Queue
 import sys
-import cv2
 import time
+from queue import Queue
+from threading import Lock, Thread
+
+import cv2
 
 
 class FileVideoStream:

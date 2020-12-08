@@ -1,6 +1,8 @@
+import math
+
 import tensorflow as tf
 import tensorflow.keras as keras
-import math
+
 
 # Bottleneck
 class Bottleneck(keras.layers.Layer):

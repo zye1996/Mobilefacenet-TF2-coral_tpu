@@ -1,9 +1,9 @@
-import tensorflow as tf
-import tflite_runtime.interpreter as tflite
 import platform
 
-from postprocessing import *
+import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 
+from postprocessing import *
 
 EDGETPU_SHARED_LIB = {
     'Linux': 'libedgetpu.so.1',
@@ -76,9 +76,10 @@ class FaceDetector():
 
 class FaceRecognizer:
 
-    def __init__(self, model_dir, tpu=True):
+    def __init__(self, model_dir, tpu=True, mask=False):
 
         self.tpu = tpu
+        self.mask = mask
         if self.tpu:
             self.interpreter = tflite.Interpreter(model_path=model_dir,
                                                   experimental_delegates=[tflite.load_delegate(EDGETPU_SHARED_LIB)])
@@ -86,10 +87,14 @@ class FaceRecognizer:
             self.interpreter = tf.compat.v1.lite.Interpreter(model_path=model_dir)
         self.interpreter.allocate_tensors()
         self.rec_input_index = self.interpreter.get_input_details()[0]['index']
-        self.rec_output_index = self.interpreter.get_output_details()[1]['index']
-        self.mask_output_index = self.interpreter.get_output_details()[0]['index']
+        if self.mask:
+            self.rec_output_index = self.interpreter.get_output_details()[1]['index']
+            self.mask_output_index = self.interpreter.get_output_details()[0]['index']
+            print('here')
+        else:
+            self.rec_output_index = self.interpreter.get_output_details()[0]['index']
 
-    def face_recognize(self, image, landmark=None, mask=False):
+    def face_recognize(self, image, landmark=None):
 
         if landmark is not None:
             aligned = face_algin_by_landmark(image, landmark)
@@ -97,23 +102,14 @@ class FaceRecognizer:
             aligned = image
 
         if not self.tpu:
-            # aligned_norm = preprocess(aligned)
-            aligned_norm = aligned
+            aligned_norm = np.expand_dims(aligned, axis=0).astype(np.float32)
         else:
             aligned_norm = np.expand_dims(aligned, axis=0)
 
         self.interpreter.set_tensor(self.rec_input_index, aligned_norm)
         self.interpreter.invoke()
         feature = get_quant_int8_output(self.interpreter, self.rec_output_index)
-        if mask:
+        if self.mask:
             mask = get_quant_int8_output(self.interpreter, self.mask_output_index)
             return feature, mask
-        return feature
-
-
-
-
-
-
-
-
+        return feature, None

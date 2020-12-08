@@ -1,9 +1,10 @@
-import numpy as np
 import argparse
 import os
-import matplotlib.pyplot as plt
-from inference.FaceRecognizer import FaceRecognizer
 
+import matplotlib.pyplot as plt
+import numpy as np
+
+from inference.FaceRecognizer import FaceRecognizer
 
 # FLAGS
 parser = argparse.ArgumentParser(description='Parsing args for generate database')
