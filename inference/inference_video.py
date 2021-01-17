@@ -19,10 +19,13 @@ from postprocessing import *
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--platform', type=str,
                     help='picamera or desktop')
+parser.add_argument('--cam_index', type=int, default=0,
+                    help="camera index in system")
 parser.add_argument('--w', type=int, default=320)
-parser.add_argument('--coral_tpu', type=bool, default=False,
+parser.add_argument('--coral_tpu', action="store_true",
                     help="whether use tpu")
-parser.add_argument('--mask', type=bool, default=False)
+parser.add_argument('--mask', action="store_true",
+                    help="whether use enable mask detection")
 args = parser.parse_args()
 
 
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     # load database
     rec_db = np.load(DATABASE_PATH)
     label = json.load(open(LABEL_PATH))
-    cap = FileVideoStream(0).start()
+    cap = FileVideoStream(args.cam_index).start()
 
     # kalman filter
     metric = NearestNeighborDistanceMetric(

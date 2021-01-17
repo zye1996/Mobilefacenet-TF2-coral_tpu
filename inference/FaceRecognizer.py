@@ -92,7 +92,7 @@ class FaceRecognizer:
             self.mask_output_index = self.interpreter.get_output_details()[0]['index']
             print('here')
         else:
-            self.rec_output_index = self.interpreter.get_output_details()[0]['index']
+            self.rec_output_index = self.interpreter.get_output_details()[1]['index']
 
     def face_recognize(self, image, landmark=None):
 
