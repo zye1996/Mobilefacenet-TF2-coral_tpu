@@ -14,6 +14,79 @@ Running 60 fps on Desktop with Coral TPU, and around 24 fps on raspberry pi
 
 ## Usage
 
+### Automatic Face Registering
+
+#### Adding New Faces from an Image Folder
+To register new faces, place images of each person in a folder organized by name:
+```
+images/
+  yzy/
+    yzy1.jpg
+    yzy2.jpg
+  steve/
+    steve1.jpg
+```
+Then run the database generation script:
+```bash
+python utils/generate_db.py --images path/to/images --db_dir pretrained_model/
+```
+This will produce `db.npy` (face embeddings) and `label.json` (name-to-index mapping) in the output directory.
+
+To merge new faces into an existing database, load the existing `db.npy` and `label.json`, append the new embeddings and labels, and save:
+```python
+import numpy as np
+import json
+
+old_db = np.load("pretrained_model/db.npy")
+old_label = json.load(open("pretrained_model/label.json"))
+
+new_db = np.load("pretrained_model/db.npy")  # from generate_db.py output
+new_label = json.load(open("pretrained_model/label.json"))
+
+merged_db = np.concatenate([old_db, new_db], axis=0)
+merged_label = {**old_label, **new_label}
+
+np.save("pretrained_model/db.npy", merged_db)
+json.dump(merged_label, open("pretrained_model/label.json", "w"))
+```
+
+#### Removing Faces from the Database
+To remove a face, delete its entry from `label.json` and the corresponding row from `db.npy`:
+```python
+import numpy as np
+import json
+
+db = np.load("pretrained_model/db.npy")
+label = json.load(open("pretrained_model/label.json"))
+
+# Remove a specific label
+idx_to_remove = label.pop("steve", None)
+if idx_to_remove is not None:
+    db = np.delete(db, idx_to_remove, axis=0)
+    # Re-index remaining labels
+    label = {name: i for i, name in enumerate(label)}
+
+np.save("pretrained_model/db.npy", db)
+json.dump(label, open("pretrained_model/label.json", "w"))
+```
+
+#### Hot-Saving and Retraining New Faces from Camera
+During inference, captured face embeddings can be appended to the database in real time:
+```python
+# After detecting and recognizing a face, save the new embedding
+new_feature = feature  # from face_recognizer.face_recognize()
+db = np.load("pretrained_model/db.npy")
+label = json.load(open("pretrained_model/label.json"))
+
+new_id = max(label.values()) + 1 if label else 0
+label[str(new_id)] = "new_person_name"
+db = np.concatenate([db, new_feature.reshape(1, -1)], axis=0)
+
+np.save("pretrained_model/db.npy", db)
+json.dump(label, open("pretrained_model/label.json", "w"))
+```
+To make the new face persist across sessions, retrain the recognition model using the updated database.
+
 ### Dataset
 Use the same dataset as used in [Mobilefacenet-Pytorch](https://github.com/Xiaoccer/MobileFaceNet_Pytorch) to train. 
 CASIA is used for training and LFW is used for testing.
